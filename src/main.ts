@@ -5,10 +5,13 @@ import * as cookieParser from "cookie-parser";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 
 async function start() {
+  const express = require("express");
   const PORT = Number(process.env.PORT) ?? 3000;
   const app = await NestFactory.create(AppModule, {
     logger: ["error", "debug", "warn"],
   });
+  app.enableCors();
+  app.use("/uploads", express.static("uploads"));
   app.setGlobalPrefix("api");
   app.use(cookieParser());
   app.useGlobalPipes(
