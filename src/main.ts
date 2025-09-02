@@ -3,12 +3,14 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import * as cookieParser from 'cookie-parser';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import config from './config';
 
 async function start() {
-  const PORT = Number(process.env.PORT) ?? 3000;
+  const PORT = config.PORT;
   const app = await NestFactory.create(AppModule, {
     logger: ['error', 'debug', 'warn'],
   });
+  app.enableCors();
   app.setGlobalPrefix('api');
   app.use(cookieParser());
   app.useGlobalPipes(
@@ -19,7 +21,7 @@ async function start() {
     }),
   );
 
-  const config = new DocumentBuilder()
+  const swaggerConfig = new DocumentBuilder()
     .setTitle('Mini e-commerce')
     .setVersion('1.0')
     .addBearerAuth(
@@ -36,7 +38,7 @@ async function start() {
     .addSecurityRequirements('JWT-auth')
     .build();
 
-  const document = SwaggerModule.createDocument(app, config, {
+  const document = SwaggerModule.createDocument(app, swaggerConfig, {
     deepScanRoutes: true,
   });
   SwaggerModule.setup('api/docs', app, document, {
