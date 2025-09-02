@@ -7,7 +7,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { Observable } from 'rxjs';
 import { Payload } from 'src/user/user.service';
-import { errorCatch } from '../helpers/error-catch';
+import config from 'src/config';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -16,28 +16,33 @@ export class AuthGuard implements CanActivate {
   canActivate(
     context: ExecutionContext,
   ): boolean | Promise<boolean> | Observable<boolean> {
-    try {
-      const req = context.switchToHttp().getRequest();
-      const auth = req.headers?.authorization;
-      if (!auth) {
-        throw new UnauthorizedException('Unauthorized');
-      }
-      const [bearer, token] = auth.split(' ');
+    const req = context.switchToHttp().getRequest();
+    const auth = req.headers?.authorization;
 
-      if (bearer !== 'Bearer' || !token) {
-        throw new UnauthorizedException('Token not found');
-      }
+    if (!auth) {
+      throw new UnauthorizedException('Authorization header not found');
+    }
+
+    const [bearer, token] = auth.split(' ');
+
+    if (bearer !== 'Bearer' || !token) {
+      throw new UnauthorizedException('Invalid token format');
+    }
+
+    try {
       const user: Payload = this.jwtService.verify(token, {
-        secret: process.env.ACCESS_TOKEN_KEY,
+        secret: config.ACCESS_TOKEN_KEY,
       });
-      if (!user) {
-        throw new UnauthorizedException('Token expired');
-      }
 
       req.user = user;
       return true;
     } catch (error) {
-      return errorCatch(error);
+      if (error.name === 'TokenExpiredError') {
+        throw new UnauthorizedException('Token expired');
+      } else if (error.name === 'JsonWebTokenError') {
+        throw new UnauthorizedException('Invalid token');
+      }
+      throw new UnauthorizedException('Unauthorized');
     }
   }
 }

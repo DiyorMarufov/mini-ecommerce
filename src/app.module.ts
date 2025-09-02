@@ -20,7 +20,7 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
     }),
     ServeStaticModule.forRoot({
-      rootPath: resolve(__dirname, '..', '..', '..', 'uploads'),
+      rootPath: resolve(__dirname, '..', '..', '..', '..', 'uploads'),
       serveRoot: '/uploads',
     }),
     CacheModule.register({
