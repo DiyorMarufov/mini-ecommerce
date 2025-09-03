@@ -5,27 +5,27 @@ import {
   Injectable,
   NotFoundException,
   UnauthorizedException,
-} from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { User } from './entities/user.entity';
-import { Repository } from 'typeorm';
-import { Role } from '../common/enum';
-import config from 'src/config';
-import { errorCatch } from 'src/common/helpers/error-catch';
-import { decrypt, encrypt } from 'src/common/bcrypt';
-import { CreateUserDto } from './dto/create-user.dto';
-import { generateOTP } from 'src/common/otp';
-import { MailService } from 'src/common/mail/mail.service';
-import { goodResponse } from 'src/common/helpers/good-response';
-import { ConfirmOtpUserDto } from './dto/confirm-otp-dto';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Cache } from 'cache-manager';
-import { writeToCookie } from 'src/common/cookie/cookie';
-import { Request, Response } from 'express';
-import { TokenService } from 'src/common/token/token';
-import { SignInUserDto } from './dto/signin-dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { UpdateUserByAdminDto } from './dto/update-user-byAdmin-dto';
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { User } from "./entities/user.entity";
+import { Repository } from "typeorm";
+import { Role } from "../common/enum";
+import config from "src/config";
+import { errorCatch } from "src/common/helpers/error-catch";
+import { decrypt, encrypt } from "src/common/bcrypt";
+import { CreateUserDto } from "./dto/create-user.dto";
+import { generateOTP } from "src/common/otp";
+import { MailService } from "src/common/mail/mail.service";
+import { goodResponse } from "src/common/helpers/good-response";
+import { ConfirmOtpUserDto } from "./dto/confirm-otp-dto";
+import { CACHE_MANAGER } from "@nestjs/cache-manager";
+import { Cache } from "cache-manager";
+import { writeToCookie } from "src/common/cookie/cookie";
+import { Request, Response } from "express";
+import { TokenService } from "src/common/token/token";
+import { SignInUserDto } from "./dto/signin-dto";
+import { UpdateUserDto } from "./dto/update-user.dto";
+import { UpdateUserByAdminDto } from "./dto/update-user-byAdmin-dto";
 
 export interface Payload {
   id: number;
@@ -38,7 +38,7 @@ export class UserService {
     @InjectRepository(User) private userRepo: Repository<User>,
     private readonly mailService: MailService,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
-    private readonly tokenService: TokenService,
+    private readonly tokenService: TokenService
   ) {}
   async onModuleInit(): Promise<void> {
     try {
@@ -60,18 +60,50 @@ export class UserService {
     }
   }
 
+  async findAll() {
+    const allUsers = await this.userRepo.find({
+      select: {
+        address: true,
+        email: true,
+        fname: true,
+        lname: true,
+        id: true,
+        role: true,
+      },
+    });
+
+    return goodResponse(200, "Barcha users muvaffaqiyatli olindi", allUsers);
+  }
+
+  async findOne(id: number) {
+    const user = await this.userRepo.findOne({
+      where: { id },
+      select: {
+        address: true,
+        email: true,
+        fname: true,
+        lname: true,
+        id: true,
+        role: true,
+      },
+    });
+    if (user) throw new NotFoundException(`${id} id'lik user topilmadi`);
+
+    return goodResponse(200, `${id} id'lik user muvaffaqiyatli olindi`, user);
+  }
+
   async signinAdmin(signInAdminDto: SignInUserDto, res: Response) {
     try {
       const { email, password } = signInAdminDto;
       const admin = await this.userRepo.findOne({ where: { email } });
       if (!admin) {
-        throw new BadRequestException('Email is incorrect');
+        throw new BadRequestException("Email is incorrect");
       }
 
       const { password: hashed_password } = admin;
       const isMatchPassword = await decrypt(password, hashed_password);
       if (!isMatchPassword) {
-        throw new BadRequestException('Password is incorrect');
+        throw new BadRequestException("Password is incorrect");
       }
 
       const { id, role } = admin;
@@ -80,8 +112,8 @@ export class UserService {
       const refreshToken =
         await this.tokenService.generateRefreshToken(payload);
 
-      writeToCookie(res, 'refreshTokenSuperAdmin', refreshToken);
-      return goodResponse(200, 'success', accessToken);
+      writeToCookie(res, "refreshTokenSuperAdmin", refreshToken);
+      return goodResponse(200, "success", accessToken);
     } catch (error) {
       return errorCatch(error);
     }
@@ -95,7 +127,7 @@ export class UserService {
 
       if (existingEmail)
         throw new BadRequestException(
-          `Email ${createUserDto.email} already exists`,
+          `Email ${createUserDto.email} already exists`
         );
 
       const { password } = createUserDto;
@@ -113,7 +145,7 @@ export class UserService {
       await this.mailService.sendOtp(
         createUserDto.email,
         `Otp verification`,
-        otp,
+        otp
       );
 
       return goodResponse(201, `Otp sent to email ${createUserDto.email}`, {});
@@ -128,14 +160,14 @@ export class UserService {
       const user = await this.userRepo.findOne({ where: { email } });
       if (!user)
         throw new BadRequestException(
-          `User with email ${email} does not exist`,
+          `User with email ${email} does not exist`
         );
 
       const hasUser = await this.cacheManager.get(email);
       if (!hasUser || hasUser !== otp)
         throw new BadRequestException(`Incorrect or expired otp`);
 
-      return goodResponse(200, 'success', `Otp confirmed successfully`);
+      return goodResponse(200, "success", `Otp confirmed successfully`);
     } catch (e) {
       return errorCatch(e);
     }
@@ -148,13 +180,13 @@ export class UserService {
       const user = await this.userRepo.findOne({ where: { email } });
 
       if (!user) {
-        throw new BadRequestException('Email or password incorrect');
+        throw new BadRequestException("Email or password incorrect");
       }
 
       const isPasswordMatch = await decrypt(password, user.password);
 
       if (!isPasswordMatch) {
-        throw new BadRequestException('Email or password incorrect');
+        throw new BadRequestException("Email or password incorrect");
       }
 
       const { id, role } = user;
@@ -164,9 +196,9 @@ export class UserService {
       const refreshToken =
         await this.tokenService.generateRefreshToken(payload);
 
-      writeToCookie(res, 'refreshTokenUser', refreshToken);
+      writeToCookie(res, "refreshTokenUser", refreshToken);
 
-      return goodResponse(200, 'success', accessToken);
+      return goodResponse(200, "success", accessToken);
     } catch (error) {
       return errorCatch(error);
     }
@@ -175,7 +207,7 @@ export class UserService {
   async authUserProfile(req: Request): Promise<any> {
     try {
       const user = (req as any).user;
-      if (user && 'id' in user) {
+      if (user && "id" in user) {
         const id = user.id;
         const userData = await this.userRepo.findOne({ where: { id } });
 
@@ -191,9 +223,9 @@ export class UserService {
           email: userData.email,
         };
 
-        return goodResponse(200, 'success', authUser);
+        return goodResponse(200, "success", authUser);
       } else {
-        throw new UnauthorizedException('User not authenticated');
+        throw new UnauthorizedException("User not authenticated");
       }
     } catch (error) {
       return errorCatch(error);
@@ -220,7 +252,7 @@ export class UserService {
 
       const updatedUser = await this.userRepo.findOne({ where: { id } });
 
-      return goodResponse(200, 'success', {
+      return goodResponse(200, "success", {
         id: updatedUser?.id,
         fname: updatedUser?.fname,
         lname: updatedUser?.lname,
@@ -248,7 +280,7 @@ export class UserService {
 
       const updatedUser = await this.userRepo.findOne({ where: { id } });
 
-      return goodResponse(200, 'success', updatedUser);
+      return goodResponse(200, "success", updatedUser);
     } catch (error) {
       return errorCatch(error);
     }
@@ -263,7 +295,7 @@ export class UserService {
       }
 
       await this.userRepo.delete(id);
-      return goodResponse(200, 'success', {});
+      return goodResponse(200, "success", {});
     } catch (error) {
       return errorCatch(error);
     }
