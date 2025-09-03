@@ -240,10 +240,6 @@ export class UserService {
         throw new NotFoundException(`User with ID ${id} not found`);
       }
 
-      if (existsUser.role === Role.OWNER) {
-        throw new ForbiddenException(`Can't update the owner`);
-      }
-
       const { affected } = await this.userRepo.update(id, updateUserDto);
 
       if (!affected) {
