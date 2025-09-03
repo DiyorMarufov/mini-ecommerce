@@ -1,17 +1,17 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { CreateProductDto } from './dto/create-product.dto';
-import { UpdateProductDto } from './dto/update-product.dto';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Product } from './entities/product.entity';
-import { Repository } from 'typeorm';
-import { CategoryService } from '../category/category.service';
-import { goodResponse } from '../common/helpers/good-response';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { CreateProductDto } from "./dto/create-product.dto";
+import { UpdateProductDto } from "./dto/update-product.dto";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Product } from "./entities/product.entity";
+import { Repository } from "typeorm";
+import { CategoryService } from "../category/category.service";
+import { goodResponse } from "../common/helpers/good-response";
 
 @Injectable()
 export class ProductService {
   constructor(
     @InjectRepository(Product) private productRepo: Repository<Product>,
-    private readonly categoryService: CategoryService,
+    private readonly categoryService: CategoryService
   ) {}
   async create(createProductDto: CreateProductDto) {
     const { categoryId, images } = createProductDto;
@@ -22,7 +22,7 @@ export class ProductService {
       images: images || [],
     });
 
-    return goodResponse(201, 'Product muvaffaqiyatli qo‘shildi', newProduct);
+    return goodResponse(201, "Product muvaffaqiyatli qo‘shildi", newProduct);
   }
 
   async findAll() {
@@ -32,8 +32,8 @@ export class ProductService {
 
     return goodResponse(
       200,
-      'Barcha products muvaffaqiyatli olindi',
-      allProducts,
+      "Barcha products muvaffaqiyatli olindi",
+      allProducts
     );
   }
 
@@ -46,7 +46,7 @@ export class ProductService {
     return goodResponse(
       200,
       `${id} id'lik product muvaffaqiyatli olindi`,
-      product,
+      product
     );
   }
 
@@ -65,7 +65,7 @@ export class ProductService {
     return goodResponse(
       200,
       `${id} id'lik product muvaffaqiyatli yangilandi`,
-      updated,
+      updated
     );
   }
 
@@ -76,7 +76,7 @@ export class ProductService {
     return goodResponse(
       200,
       `${id} lik product muvaffaqiyatli o‘chirildi`,
-      product,
+      product
     );
   }
 }

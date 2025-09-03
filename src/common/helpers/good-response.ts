@@ -1,9 +1,9 @@
 export const goodResponse = <T>(
-  statusCode: number,
+  status_code: number,
   message: string,
   data: T
 ) => {
-  return { statusCode, message, data };
+  return { status_code, message, data };
 }; /* class GoodResponse {
   constructor(
     public statusCode: number,
