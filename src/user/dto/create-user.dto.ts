@@ -1,42 +1,41 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty } from "@nestjs/swagger";
 import {
   IsEmail,
-  IsEmpty,
-  IsEnum,
   IsNotEmpty,
   IsString,
-} from 'class-validator';
-import { Role } from 'src/common/enum';
+  IsStrongPassword,
+} from "class-validator";
 
 export class CreateUserDto {
-  @ApiProperty({ example: 'Ali', description: 'Foydalanuvchining ismi' })
+  @ApiProperty({ example: "Ali", description: "Foydalanuvchining ismi" })
   @IsString()
   @IsNotEmpty()
   fname: string;
 
   @ApiProperty({
-    example: 'Valiyev',
+    example: "Valiyev",
     required: false,
-    description: 'Familiyasi',
+    description: "Familiyasi",
   })
   @IsString()
   lname?: string;
 
   @ApiProperty({
-    example: 'Tashkent, Uzbekistan',
+    example: "Tashkent, Uzbekistan",
     required: false,
-    description: 'Manzili',
+    description: "Manzili",
   })
   @IsString()
   address?: string;
 
-  @ApiProperty({ example: 'ali@gmail.com', description: 'Email manzili' })
+  @ApiProperty({ example: "ali@gmail.com", description: "Email manzili" })
   @IsEmail()
   @IsNotEmpty()
   email: string;
 
-  @ApiProperty({ example: 'P@ssw0rd!', description: 'Parol' })
+  @ApiProperty({ example: "P@ssw0rd!", description: "Parol" })
   @IsString()
   @IsNotEmpty()
+  @IsStrongPassword()
   password: string;
 }
