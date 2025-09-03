@@ -3,20 +3,20 @@ import {
   ExecutionContext,
   ForbiddenException,
   Injectable,
-} from '@nestjs/common';
-import { Observable } from 'rxjs';
-import { Role } from '../enum';
+} from "@nestjs/common";
+import { Observable } from "rxjs";
+import { Role } from "../enum";
 
 @Injectable()
 export class AdminGuard implements CanActivate {
   canActivate(
-    ctx: ExecutionContext,
+    ctx: ExecutionContext
   ): boolean | Promise<boolean> | Observable<boolean> {
-    const { user } = ctx.switchToHttp().getRequest();
+    const { user, params } = ctx.switchToHttp().getRequest();
     if (user.role === Role.OWNER) {
       return true;
     }
-    if (user.role === Role.ADMIN) {
+    if (user.role === Role.ADMIN && Number(params.id) === Number(user.id)) {
       return true;
     }
     throw new ForbiddenException(`Forbidden user with role ${user.role}`);
