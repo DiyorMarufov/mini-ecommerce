@@ -3,14 +3,14 @@ import {
   ExecutionContext,
   ForbiddenException,
   Injectable,
-} from '@nestjs/common';
-import { Observable } from 'rxjs';
-import { Role } from '../enum';
+} from "@nestjs/common";
+import { Observable } from "rxjs";
+import { Role } from "../enum";
 
 @Injectable()
 export class UserGuard implements CanActivate {
   canActivate(
-    ctx: ExecutionContext,
+    ctx: ExecutionContext
   ): boolean | Promise<boolean> | Observable<boolean> {
     const { user, params } = ctx.switchToHttp().getRequest();
     if (user.role === Role.OWNER) {

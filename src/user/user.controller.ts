@@ -88,13 +88,17 @@ export class UserController {
     return this.userService.signIn(userSignInDto, res);
   }
 
+  @UseGuards(AuthGuard, AdminGuard)
+  @checkRoles(Role.OWNER, Role.ADMIN)
   @ApiOperation({ summary: "Get all users" })
   @ApiResponse({ status: 200, description: "List of users" })
   @Get()
-  findAll() {
-    return this.userService.findAll();
+  findAll(@Req() req: Request) {
+    return this.userService.findAll(req);
   }
 
+  @UseGuards(AuthGuard, AdminGuard)
+  @checkRoles(Role.OWNER, Role.ADMIN)
   @Get(":id")
   @ApiOperation({ summary: "Get user by ID" })
   @ApiResponse({ status: 200, description: "User found" })

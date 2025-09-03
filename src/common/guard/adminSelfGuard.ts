@@ -16,7 +16,7 @@ export class AdminGuard implements CanActivate {
     if (user.role === Role.OWNER) {
       return true;
     }
-    if (user.role === Role.ADMIN) {
+    if (user.role === Role.ADMIN && Number(params.id) === Number(user.id)) {
       return true;
     }
     throw new ForbiddenException(`Forbidden user with role ${user.role}`);

@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
@@ -8,7 +7,7 @@ import {
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { User } from "./entities/user.entity";
-import { Repository } from "typeorm";
+import { FindOptions, FindOptionsWhere, Repository } from "typeorm";
 import { Role } from "../common/enum";
 import config from "src/config";
 import { errorCatch } from "src/common/helpers/error-catch";
@@ -60,14 +59,30 @@ export class UserService {
     }
   }
 
-  async findAll() {
+  async findAll(req: Request) {
+    const user = (req as any).user;
+    let where: FindOptionsWhere<User> = {};
+    if (user && "id" in user) {
+      const id = user.id;
+      const userData = await this.userRepo.findOne({ where: { id } });
+
+      if (!userData) {
+        throw new NotFoundException(`User not found`);
+      }
+
+      if (userData.role === "admin") {
+        where.role = Role.USER;
+      }
+    }
+
     const allUsers = await this.userRepo.find({
+      where,
       select: {
         address: true,
         email: true,
         fname: true,
-        lname: true,
         id: true,
+        lname: true,
         role: true,
       },
     });
@@ -97,13 +112,13 @@ export class UserService {
       const { email, password } = signInAdminDto;
       const admin = await this.userRepo.findOne({ where: { email } });
       if (!admin) {
-        throw new BadRequestException("Email is incorrect");
+        throw new BadRequestException("Email or password incorrect");
       }
 
       const { password: hashed_password } = admin;
       const isMatchPassword = await decrypt(password, hashed_password);
       if (!isMatchPassword) {
-        throw new BadRequestException("Password is incorrect");
+        throw new BadRequestException("Email or password incorrect");
       }
 
       const { id, role } = admin;
@@ -262,8 +277,8 @@ export class UserService {
 
   async updateUserRole(id: number, updateUserByAdminDto: UpdateUserByAdminDto) {
     try {
+      console.log(id);
       const existsUser = await this.userRepo.findOne({ where: { id } });
-
       if (!existsUser) {
         throw new NotFoundException(`User with ID ${id} not found`);
       }
