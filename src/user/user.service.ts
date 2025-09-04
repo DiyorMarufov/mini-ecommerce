@@ -25,6 +25,7 @@ import { TokenService } from "src/common/token/token";
 import { SignInUserDto } from "./dto/signin-dto";
 import { UpdateUserDto } from "./dto/update-user.dto";
 import { UpdateUserByAdminDto } from "./dto/update-user-byAdmin-dto";
+import { NewOtpDto } from "./dto/new-otp.dto";
 
 export interface Payload {
   id: number;
@@ -51,6 +52,7 @@ export class UserService {
           email: config.ADMIN_EMAIL,
           password: hashedPassword,
           role: Role.OWNER,
+          isActive: true,
         });
         await this.userRepo.save(SUPER_ADMIN);
       }
@@ -58,6 +60,8 @@ export class UserService {
       return errorCatch(error);
     }
   }
+
+  async activeUser() {}
 
   async findAll(req: Request) {
     const user = (req as any).user;
@@ -121,6 +125,8 @@ export class UserService {
         throw new BadRequestException("Email or password incorrect");
       }
 
+      if (!admin.isActive) throw new BadRequestException("User in not active");
+
       const { id, role } = admin;
       const payload = { id, role, email };
       const accessToken = await this.tokenService.generateAccessToken(payload);
@@ -145,7 +151,7 @@ export class UserService {
           `Email ${createUserDto.email} already exists`
         );
 
-      const { password } = createUserDto;
+      const { password, email } = createUserDto;
       const hashedPassword = await encrypt(password);
       const newUser = this.userRepo.create({
         ...createUserDto,
@@ -153,17 +159,9 @@ export class UserService {
         role: Role.USER,
       });
 
+      await this.newOtp({ email });
+
       await this.userRepo.save(newUser);
-
-      const otp = generateOTP();
-      await this.cacheManager.set(createUserDto.email, otp);
-      await this.mailService.sendOtp(
-        createUserDto.email,
-        `Otp verification`,
-        otp
-      );
-
-      return goodResponse(201, `Otp sent to email ${createUserDto.email}`, {});
     } catch (error) {
       return errorCatch(error);
     }
@@ -179,13 +177,26 @@ export class UserService {
         );
 
       const hasUser = await this.cacheManager.get(email);
+
       if (!hasUser || hasUser !== otp)
         throw new BadRequestException(`Incorrect or expired otp`);
+
+      await this.userRepo.save({ ...user, isActive: true });
 
       return goodResponse(200, "success", `Otp confirmed successfully`);
     } catch (e) {
       return errorCatch(e);
     }
+  }
+
+  async newOtp(newOtpDto: NewOtpDto) {
+    const { email } = newOtpDto;
+    const otp = generateOTP();
+    await this.cacheManager.set(email, otp);
+
+    await this.mailService.sendOtp(email, `Otp verification`, otp);
+
+    return goodResponse(201, `Otp sent to the email ${email}`, {});
   }
 
   async signIn(userSignInDto: SignInUserDto, res: Response): Promise<object> {
@@ -277,13 +288,15 @@ export class UserService {
 
   async updateUserRole(id: number, updateUserByAdminDto: UpdateUserByAdminDto) {
     try {
-      console.log(id);
       const existsUser = await this.userRepo.findOne({ where: { id } });
       if (!existsUser) {
         throw new NotFoundException(`User with ID ${id} not found`);
       }
 
-      const { affected } = await this.userRepo.update(id, updateUserByAdminDto);
+      const { affected } = await this.userRepo.update(id, {
+        ...updateUserByAdminDto,
+        isActive: true,
+      });
 
       if (!affected) {
         throw new BadRequestException(`User with ID ${id} not updated`);

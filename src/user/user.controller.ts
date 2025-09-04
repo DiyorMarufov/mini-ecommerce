@@ -33,6 +33,8 @@ import { checkRoles } from "src/common/decorator/rolesDecorator";
 import { Role } from "src/common/enum";
 import { AdminGuard } from "src/common/guard/adminGuard";
 import { UserGuard } from "src/common/guard/userGuard";
+import { NewOtpDto } from "./dto/new-otp.dto";
+import { OwnerGuard } from "../common/guard/ownerGuard";
 
 @ApiTags("User")
 @UseInterceptors(CacheInterceptor)
@@ -117,6 +119,16 @@ export class UserController {
     return this.userService.authUserProfile(req);
   }
 
+  @ApiOperation({ summary: "Generate a new OTP" })
+  @ApiResponse({
+    status: 201,
+    description: "Otp sent to the email",
+  })
+  @Post("new-opt")
+  newOtp(@Body() newOtpDto: NewOtpDto) {
+    return this.userService.newOtp(newOtpDto);
+  }
+
   @UseGuards(AuthGuard, UserGuard)
   @checkRoles(Role.OWNER, Role.ADMIN, Role.USER)
   @Patch("/:id")
@@ -139,8 +151,8 @@ export class UserController {
     return this.userService.updateUser(id, updateUserDto);
   }
 
-  @UseGuards(AuthGuard, AdminGuard)
-  @checkRoles(Role.OWNER, Role.ADMIN)
+  @UseGuards(AuthGuard, OwnerGuard)
+  @checkRoles(Role.OWNER)
   @Patch("role/:id")
   @ApiOperation({ summary: "Update user role (admin only)" })
   @ApiBearerAuth("JWT-auth")

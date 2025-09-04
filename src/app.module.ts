@@ -17,7 +17,6 @@ import { APP_INTERCEPTOR } from "@nestjs/core";
       autoLoadEntities: true,
       synchronize: true,
       url: config.DB_URL,
-      entities: [__dirname + "/**/*.entity{.ts,.js}"],
     }),
     ServeStaticModule.forRoot({
       rootPath: resolve(__dirname, "..", "uploads"),
@@ -25,6 +24,7 @@ import { APP_INTERCEPTOR } from "@nestjs/core";
     }),
     CacheModule.register({
       isGlobal: true,
+      ttl: 1000 * 60 * 2,
     }),
     JwtModule.register({ global: true }),
     UserModule,

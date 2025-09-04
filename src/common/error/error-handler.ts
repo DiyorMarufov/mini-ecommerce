@@ -18,8 +18,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
         ? exception.getStatus()
         : HttpStatus.INTERNAL_SERVER_ERROR;
 
-    let message = "Internal server error";
-    let error = "Internal Server Error";
+    let message = "Something went wrong";
+    let error = "Bad Request";
 
     if (exception instanceof HttpException) {
       const exceptionResponse = exception.getResponse();
@@ -31,8 +31,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
       ) {
         const messageFromResponse = (exceptionResponse as any).message;
         const errorFromResponse = (exceptionResponse as any).error;
-
-
         // Harqanday message'ning type string bo‘lishi uchun pastdagi code'ni comment'dan chiqaring
         // if (Array.isArray(messageFromResponse)) {
         //   message = messageFromResponse.join(", ");
@@ -41,12 +39,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
         // }
 
         error = errorFromResponse || error;
-        console.log(message);
       }
     } else if (exception instanceof Error) {
       message = exception.message;
     }
-
     const error_response = {
       message: message,
       error: error,

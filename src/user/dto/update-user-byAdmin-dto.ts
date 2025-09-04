@@ -1,9 +1,9 @@
-import { PartialType } from '@nestjs/swagger';
-import { CreateUserDto } from './create-user.dto';
-import { Role } from 'src/common/enum';
-import { IsEnum } from 'class-validator';
+import { Role } from "src/common/enum";
+import { IsEnum } from "class-validator";
+import { ApiProperty } from "@nestjs/swagger";
 
-export class UpdateUserByAdminDto extends PartialType(CreateUserDto) {
+export class UpdateUserByAdminDto {
+  @ApiProperty({ enum: Role, type: "string" })
   @IsEnum(Role)
   role?: Role;
 }
