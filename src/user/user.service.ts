@@ -61,7 +61,23 @@ export class UserService {
     }
   }
 
-  async activeUser() {}
+  async activeUser(id: number) {
+    const { data: user } = await this.findOne(id);
+
+    if (user.isActive)
+      return goodResponse(
+        200,
+        `${id} id'lik user muvaffaqiyatli active'lashtirildi`,
+        user
+      );
+    await this.userRepo.save({ ...user, isActive: true });
+
+    return goodResponse(
+      200,
+      `${id} id'lik user muvaffaqiyatli active'lashtirildi`,
+      user
+    );
+  }
 
   async findAll(req: Request) {
     const user = (req as any).user;
@@ -106,7 +122,7 @@ export class UserService {
         role: true,
       },
     });
-    if (user) throw new NotFoundException(`${id} id'lik user topilmadi`);
+    if (!user) throw new NotFoundException(`${id} id'lik user topilmadi`);
 
     return goodResponse(200, `${id} id'lik user muvaffaqiyatli olindi`, user);
   }

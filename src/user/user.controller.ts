@@ -151,6 +151,11 @@ export class UserController {
     return this.userService.updateUser(id, updateUserDto);
   }
 
+  @Patch("active")
+  active(@Param("id", ParseIntPipe) id: number) {
+    this.userService.activeUser(id);
+  }
+
   @UseGuards(AuthGuard, OwnerGuard)
   @checkRoles(Role.OWNER)
   @Patch("role/:id")
