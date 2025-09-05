@@ -10,6 +10,7 @@ import { Response } from "express";
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost) {
+    console.log(exception);
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
 
@@ -31,12 +32,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       ) {
         const messageFromResponse = (exceptionResponse as any).message;
         const errorFromResponse = (exceptionResponse as any).error;
-        // Harqanday message'ning type string bo‘lishi uchun pastdagi code'ni comment'dan chiqaring
-        // if (Array.isArray(messageFromResponse)) {
-        //   message = messageFromResponse.join(", ");
-        // } else {
         message = messageFromResponse || message;
-        // }
 
         error = errorFromResponse || error;
       }

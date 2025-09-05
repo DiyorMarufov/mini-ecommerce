@@ -1,7 +1,8 @@
-import { Column, Entity, OneToMany } from "typeorm";
+import { Column, Entity, ManyToOne, OneToMany } from "typeorm";
 import { BaseEntity } from "../../common/db/base-entity";
 import { ApiProperty } from "@nestjs/swagger";
 import { Product } from "../../product/entities/product.entity";
+import { User } from "../../user/entities/user.entity";
 
 @Entity()
 export class Category extends BaseEntity {
@@ -9,6 +10,20 @@ export class Category extends BaseEntity {
   @Column({ unique: true })
   name: string;
 
-  @OneToMany(() => Product, product => product.category)
+  @ApiProperty({
+    type: "number",
+    description: "Category'ni qo‘shgan user id'si",
+    example: 1,
+  })
+  @Column()
+  userId: number;
+
+  @ManyToOne(() => User, (user) => user.categories, {
+    onDelete: "CASCADE",
+    nullable: false,
+  })
+  user: User;
+
+  @OneToMany(() => Product, (product) => product.category)
   products: Product[];
 }

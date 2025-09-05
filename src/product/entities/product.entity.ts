@@ -1,7 +1,8 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from "typeorm";
+import { Column, Entity, JoinColumn, ManyToOne } from "typeorm";
 import { BaseEntity } from "../../common/db/base-entity";
 import { Category } from "../../category/entities/category.entity";
 import { ApiProperty } from "@nestjs/swagger";
+import { User } from "../../user/entities/user.entity";
 
 @Entity()
 export class Product extends BaseEntity {
@@ -25,6 +26,14 @@ export class Product extends BaseEntity {
   @Column({ type: "decimal" })
   price: number;
 
+  @ApiProperty({
+    type: "number",
+    description: "Product category id'si",
+    example: 1,
+  })
+  @Column()
+  categoryId: number;
+
   @ManyToOne(() => Category, (category) => category.products, {
     onDelete: "CASCADE",
     nullable: false,
@@ -33,11 +42,17 @@ export class Product extends BaseEntity {
 
   @ApiProperty({
     type: "number",
-    description: "Product category id'si",
+    description: "Product'ni qo‘shgan user id'si",
     example: 1,
   })
   @Column()
-  categoryId: number;
+  userId: number;
+
+  @ManyToOne(() => User, (user) => user.products, {
+    onDelete: "CASCADE",
+    onUpdate: "CASCADE",
+  })
+  user: User;
 
   @ApiProperty({
     type: "string",

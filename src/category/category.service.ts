@@ -10,6 +10,7 @@ import { Category } from "./entities/category.entity";
 import { InjectRepository } from "@nestjs/typeorm";
 import { goodResponse } from "../common/helpers/good-response";
 import { checkUniqueFields } from "../common/helpers/check-unique-fields";
+import { Request } from "express";
 
 @Injectable()
 export class CategoryService {
@@ -17,7 +18,7 @@ export class CategoryService {
     @InjectRepository(Category)
     private readonly categoryRepo: Repository<Category>
   ) {}
-  async create(createCategoryDto: CreateCategoryDto) {
+  async create(createCategoryDto: CreateCategoryDto, req: Request) {
     const { name } = createCategoryDto;
     const errors = await checkUniqueFields(
       this.categoryRepo,
@@ -26,7 +27,10 @@ export class CategoryService {
     );
     if (errors.length > 0) throw new ConflictException(errors);
 
-    const newCategory = await this.categoryRepo.save({ name });
+    const newCategory = await this.categoryRepo.save({
+      ...createCategoryDto,
+      userId: (req as any).user.id,
+    });
 
     return goodResponse(201, "Category muvaffaqiyatli qo‘shildi", newCategory);
   }
@@ -35,6 +39,10 @@ export class CategoryService {
     const allCategories = await this.categoryRepo.find({
       order: {
         createdAt: "asc",
+      },
+      relations: { user: true },
+      select: {
+        user: { lname: true, fname: true, email: true },
       },
     });
 
@@ -46,7 +54,13 @@ export class CategoryService {
   }
 
   async findOne(id: number) {
-    const category = await this.categoryRepo.findOneBy({ id });
+    const category = await this.categoryRepo.findOne({
+      where: { id },
+      relations: { user: true },
+      select: {
+        user: { lname: true, fname: true, email: true },
+      },
+    });
     if (!category)
       throw new NotFoundException(`${id} id'lik category topilmadi`);
 

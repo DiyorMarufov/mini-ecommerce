@@ -1,7 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsEmail, IsNotEmpty, IsString } from "class-validator";
 
-export class ConfirmOtpUserDto {
+export class VerifyOtpDto {
   @ApiProperty({ type: "string", description: "Foydalanuvchining emaili" })
   @IsEmail()
   email: string;

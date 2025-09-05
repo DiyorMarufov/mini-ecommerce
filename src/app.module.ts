@@ -7,8 +7,7 @@ import config from "./config";
 import { JwtModule } from "@nestjs/jwt";
 import { ServeStaticModule } from "@nestjs/serve-static";
 import { resolve } from "path";
-import { CacheInterceptor, CacheModule } from "@nestjs/cache-manager";
-import { APP_INTERCEPTOR } from "@nestjs/core";
+import { AuthModule } from "./auth/auth.module";
 
 @Module({
   imports: [
@@ -22,20 +21,11 @@ import { APP_INTERCEPTOR } from "@nestjs/core";
       rootPath: resolve(__dirname, "..", "uploads"),
       serveRoot: "/uploads",
     }),
-    CacheModule.register({
-      isGlobal: true,
-      ttl: 1000 * 60 * 2,
-    }),
     JwtModule.register({ global: true }),
     UserModule,
     CategoryModule,
     ProductModule,
-  ],
-  providers: [
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: CacheInterceptor,
-    },
+    AuthModule,
   ],
 })
 export class AppModule {}

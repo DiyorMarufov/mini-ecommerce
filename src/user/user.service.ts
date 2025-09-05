@@ -1,45 +1,23 @@
 import {
   BadRequestException,
-  Inject,
   Injectable,
   NotFoundException,
-  UnauthorizedException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { User } from "./entities/user.entity";
-import { FindOptions, FindOptionsWhere, Repository } from "typeorm";
+import { FindOptionsWhere, Repository } from "typeorm";
 import { Role } from "../common/enum";
 import config from "src/config";
 import { errorCatch } from "src/common/helpers/error-catch";
-import { decrypt, encrypt } from "src/common/bcrypt";
-import { CreateUserDto } from "./dto/create-user.dto";
-import { generateOTP } from "src/common/otp";
-import { MailService } from "src/common/mail/mail.service";
 import { goodResponse } from "src/common/helpers/good-response";
-import { ConfirmOtpUserDto } from "./dto/confirm-otp-dto";
-import { CACHE_MANAGER } from "@nestjs/cache-manager";
-import { Cache } from "cache-manager";
-import { writeToCookie } from "src/common/cookie/cookie";
-import { Request, Response } from "express";
-import { TokenService } from "src/common/token/token";
-import { SignInUserDto } from "./dto/signin-dto";
+import { Request } from "express";
 import { UpdateUserDto } from "./dto/update-user.dto";
 import { UpdateUserByAdminDto } from "./dto/update-user-byAdmin-dto";
-import { NewOtpDto } from "./dto/new-otp.dto";
-
-export interface Payload {
-  id: number;
-  role: Role;
-}
+import { encrypt } from "../common/bcrypt";
 
 @Injectable()
 export class UserService {
-  constructor(
-    @InjectRepository(User) private userRepo: Repository<User>,
-    private readonly mailService: MailService,
-    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
-    private readonly tokenService: TokenService
-  ) {}
+  constructor(@InjectRepository(User) private userRepo: Repository<User>) {}
   async onModuleInit(): Promise<void> {
     try {
       const isSuperAdmin = await this.userRepo.findOne({
@@ -59,24 +37,6 @@ export class UserService {
     } catch (error) {
       return errorCatch(error);
     }
-  }
-
-  async activeUser(id: number) {
-    const { data: user } = await this.findOne(id);
-
-    if (user.isActive)
-      return goodResponse(
-        200,
-        `${id} id'lik user muvaffaqiyatli active'lashtirildi`,
-        user
-      );
-    await this.userRepo.save({ ...user, isActive: true });
-
-    return goodResponse(
-      200,
-      `${id} id'lik user muvaffaqiyatli active'lashtirildi`,
-      user
-    );
   }
 
   async findAll(req: Request) {
@@ -110,9 +70,13 @@ export class UserService {
     return goodResponse(200, "Barcha users muvaffaqiyatli olindi", allUsers);
   }
 
-  async findOne(id: number) {
+  async findOne(id: number, req?: Request) {
+    let where: FindOptionsWhere<User> = { id };
+    if ((req as any).user.role === Role.ADMIN) {
+      where.role = Role.USER;
+    }
     const user = await this.userRepo.findOne({
-      where: { id },
+      where,
       select: {
         address: true,
         email: true,
@@ -125,153 +89,6 @@ export class UserService {
     if (!user) throw new NotFoundException(`${id} id'lik user topilmadi`);
 
     return goodResponse(200, `${id} id'lik user muvaffaqiyatli olindi`, user);
-  }
-
-  async signinAdmin(signInAdminDto: SignInUserDto, res: Response) {
-    try {
-      const { email, password } = signInAdminDto;
-      const admin = await this.userRepo.findOne({ where: { email } });
-      if (!admin) {
-        throw new BadRequestException("Email or password incorrect");
-      }
-
-      const { password: hashed_password } = admin;
-      const isMatchPassword = await decrypt(password, hashed_password);
-      if (!isMatchPassword) {
-        throw new BadRequestException("Email or password incorrect");
-      }
-
-      if (!admin.isActive) throw new BadRequestException("User in not active");
-
-      const { id, role } = admin;
-      const payload = { id, role, email };
-      const accessToken = await this.tokenService.generateAccessToken(payload);
-      const refreshToken =
-        await this.tokenService.generateRefreshToken(payload);
-
-      writeToCookie(res, "refreshTokenSuperAdmin", refreshToken);
-      return goodResponse(200, "success", accessToken);
-    } catch (error) {
-      return errorCatch(error);
-    }
-  }
-
-  async signUp(createUserDto: CreateUserDto): Promise<object | undefined> {
-    try {
-      const existingEmail = await this.userRepo.findOne({
-        where: { email: createUserDto.email },
-      });
-
-      if (existingEmail)
-        throw new BadRequestException(
-          `Email ${createUserDto.email} already exists`
-        );
-
-      const { password, email } = createUserDto;
-      const hashedPassword = await encrypt(password);
-      const newUser = this.userRepo.create({
-        ...createUserDto,
-        password: hashedPassword,
-        role: Role.USER,
-      });
-
-      await this.newOtp({ email });
-
-      await this.userRepo.save(newUser);
-    } catch (error) {
-      return errorCatch(error);
-    }
-  }
-
-  async confirmOtp(confirmOtpDto: ConfirmOtpUserDto): Promise<object> {
-    try {
-      const { email, otp } = confirmOtpDto;
-      const user = await this.userRepo.findOne({ where: { email } });
-      if (!user)
-        throw new BadRequestException(
-          `User with email ${email} does not exist`
-        );
-
-      const hasUser = await this.cacheManager.get(email);
-
-      if (!hasUser || hasUser !== otp)
-        throw new BadRequestException(`Incorrect or expired otp`);
-
-      await this.userRepo.save({ ...user, isActive: true });
-
-      return goodResponse(200, "success", `Otp confirmed successfully`);
-    } catch (e) {
-      return errorCatch(e);
-    }
-  }
-
-  async newOtp(newOtpDto: NewOtpDto) {
-    const { email } = newOtpDto;
-    const otp = generateOTP();
-    await this.cacheManager.set(email, otp);
-
-    await this.mailService.sendOtp(email, `Otp verification`, otp);
-
-    return goodResponse(201, `Otp sent to the email ${email}`, {});
-  }
-
-  async signIn(userSignInDto: SignInUserDto, res: Response): Promise<object> {
-    try {
-      const { email, password } = userSignInDto;
-
-      const user = await this.userRepo.findOne({ where: { email } });
-
-      if (!user) {
-        throw new BadRequestException("Email or password incorrect");
-      }
-
-      const isPasswordMatch = await decrypt(password, user.password);
-
-      if (!isPasswordMatch) {
-        throw new BadRequestException("Email or password incorrect");
-      }
-
-      const { id, role } = user;
-      const payload: Payload = { id, role };
-
-      const accessToken = await this.tokenService.generateAccessToken(payload);
-      const refreshToken =
-        await this.tokenService.generateRefreshToken(payload);
-
-      writeToCookie(res, "refreshTokenUser", refreshToken);
-
-      return goodResponse(200, "success", accessToken);
-    } catch (error) {
-      return errorCatch(error);
-    }
-  }
-
-  async authUserProfile(req: Request): Promise<any> {
-    try {
-      const user = (req as any).user;
-      if (user && "id" in user) {
-        const id = user.id;
-        const userData = await this.userRepo.findOne({ where: { id } });
-
-        if (!userData) {
-          throw new NotFoundException(`User not found`);
-        }
-
-        const authUser = {
-          id: userData.id,
-          fname: userData.fname,
-          lname: userData.lname,
-          address: userData.address,
-          email: userData.email,
-        };
-
-        return goodResponse(200, "success", authUser);
-      } else {
-        throw new UnauthorizedException("User not authenticated");
-      }
-    } catch (error) {
-      return errorCatch(error);
-    }
   }
 
   async updateUser(id: number, updateUserDto: UpdateUserDto) {

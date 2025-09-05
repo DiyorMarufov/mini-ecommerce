@@ -6,6 +6,7 @@ import { Product } from "./entities/product.entity";
 import { Repository } from "typeorm";
 import { CategoryService } from "../category/category.service";
 import { goodResponse } from "../common/helpers/good-response";
+import { Request } from "express";
 
 @Injectable()
 export class ProductService {
@@ -13,13 +14,14 @@ export class ProductService {
     @InjectRepository(Product) private productRepo: Repository<Product>,
     private readonly categoryService: CategoryService
   ) {}
-  async create(createProductDto: CreateProductDto) {
+  async create(req: Request, createProductDto: CreateProductDto) {
     const { categoryId, images } = createProductDto;
     await this.categoryService.findOne(categoryId);
 
     const newProduct = await this.productRepo.save({
       ...createProductDto,
       images: images || [],
+      userId: (req as any).user.id,
     });
 
     return goodResponse(201, "Product muvaffaqiyatli qo‘shildi", newProduct);
@@ -38,7 +40,10 @@ export class ProductService {
   }
 
   async findOne(id: number) {
-    const product = await this.productRepo.findOneBy({ id });
+    const product = await this.productRepo.findOne({
+      where: { id },
+      relations: { category: true },
+    });
     if (!product) {
       throw new NotFoundException(`${id} id'lik product topilmadi`);
     }
