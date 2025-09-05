@@ -22,10 +22,10 @@ import { AuthModule } from "./auth/auth.module";
       serveRoot: "/uploads",
     }),
     JwtModule.register({ global: true }),
+    AuthModule,
     UserModule,
     CategoryModule,
     ProductModule,
-    AuthModule,
   ],
 })
 export class AppModule {}
