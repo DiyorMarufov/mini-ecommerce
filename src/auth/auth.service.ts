@@ -69,6 +69,8 @@ export class AuthService {
 
       const isPasswordMatch = decrypt(password, user.password);
 
+      console.log(isPasswordMatch, "isPasswordMatch");
+      console.log(password, "password");
       if (!isPasswordMatch) {
         throw new BadRequestException("Email or password incorrect");
       }
@@ -145,7 +147,6 @@ export class AuthService {
     try {
       await this.mailService.sendOtp(email, `Otp verification`, otp);
     } catch (error) {
-      console.log(error);
       throw new ServiceUnavailableException(
         "Emailga xat yuborishda xatolik",
         error.message
