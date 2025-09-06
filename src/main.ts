@@ -13,7 +13,6 @@ async function start() {
   });
   app.useGlobalFilters(new AllExceptionsFilter());
   app.enableCors();
-  app.setGlobalPrefix("api");
   app.use(cookieParser());
   app.useGlobalPipes(
     new ValidationPipe({
@@ -43,7 +42,7 @@ async function start() {
   const document = SwaggerModule.createDocument(app, swaggerConfig, {
     deepScanRoutes: true,
   });
-  SwaggerModule.setup("api/docs", app, document, {
+  SwaggerModule.setup("docs", app, document, {
     swaggerOptions: { persistAuthorization: true },
   });
 
