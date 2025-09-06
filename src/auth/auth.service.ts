@@ -67,7 +67,7 @@ export class AuthService {
         throw new BadRequestException("Email or password incorrect");
       }
 
-      const isPasswordMatch = decrypt(password, user.password);
+      const isPasswordMatch = await decrypt(password, user.password);
 
       console.log(isPasswordMatch, "isPasswordMatch");
       console.log(password, "password");
