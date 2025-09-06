@@ -92,15 +92,21 @@ export class ProductController {
   @ApiResponse({ status: 401, description: "Unauthorized" })
   @ApiResponse({ status: 403, description: "Forbidden - Insufficient role" })
   update(
-    @Param("id", ParseIntPipe) id: number,
+    @Req() req: Request,
+    @Param("id", ParseIntPipe)
+    id: number,
     @Body() updateProductDto: UpdateProductDto,
     @UploadedFiles() files?: Express.Multer.File[]
   ) {
     const imageFilenames = files?.map((file) => file.filename) || [];
-    return this.productService.update(id, {
-      ...updateProductDto,
-      images: imageFilenames,
-    });
+    return this.productService.update(
+      id,
+      {
+        ...updateProductDto,
+        images: imageFilenames,
+      },
+      req
+    );
   }
 
   @Delete(":id")

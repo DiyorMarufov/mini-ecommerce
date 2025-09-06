@@ -64,6 +64,7 @@ export class UserService {
         id: true,
         lname: true,
         role: true,
+        isActive: true,
       },
     });
 
@@ -84,6 +85,7 @@ export class UserService {
         lname: true,
         id: true,
         role: true,
+        isActive: true,
       },
     });
     if (!user) throw new NotFoundException(`${id} id'lik user topilmadi`);

@@ -24,7 +24,7 @@ import { NewOtpDto } from "../user/dto/new-otp.dto";
 import * as otpGenerator from "otp-generator";
 import { Role } from "../common/enum";
 import { UserService } from "../user/user.service";
-import { Response } from "express";
+import { Request, Response } from "express";
 import { Payload } from "../common/types/payload.type";
 
 @Injectable()
@@ -191,8 +191,8 @@ export class AuthService {
     return { message: "🎉 Tabriklayman, siz active bo'ldingiz" };
   }
 
-  async activeUser(id: number) {
-    const { data: user } = await this.userService.findOne(id);
+  async activeUser(id: number, req: Request) {
+    const { data: user } = await this.userService.findOne(id, req);
 
     if (user.isActive)
       return goodResponse(

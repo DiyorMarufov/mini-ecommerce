@@ -35,6 +35,7 @@ export class AuthGuard implements CanActivate {
       });
 
       req.user = user;
+      console.log(user);
       return true;
     } catch (error) {
       if (error.name === "TokenExpiredError") {

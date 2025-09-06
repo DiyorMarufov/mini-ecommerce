@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { CreateProductDto } from "./dto/create-product.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
 import { InjectRepository } from "@nestjs/typeorm";
@@ -7,6 +11,8 @@ import { Repository } from "typeorm";
 import { CategoryService } from "../category/category.service";
 import { goodResponse } from "../common/helpers/good-response";
 import { Request } from "express";
+import { UserService } from "../user/user.service";
+import { Role } from "../common/enum";
 
 @Injectable()
 export class ProductService {
@@ -55,9 +61,19 @@ export class ProductService {
     );
   }
 
-  async update(id: number, updateProductDto: UpdateProductDto) {
+  async update(id: number, updateProductDto: UpdateProductDto, req: Request) {
     const { images, categoryId } = updateProductDto;
+
     const { data: product } = await this.findOne(id);
+
+    if ((req as any).user.role === Role.ADMIN) {
+      const userId = (req as any).user.id;
+      if (product.userId != userId)
+        throw new ForbiddenException(
+          `Admin faqat o‘zi qo‘shgan productlari update qila oladi`
+        );
+    }
+
     const updated = { ...product, ...updateProductDto };
     if (images && images.length > 0) {
       updated.images = images;

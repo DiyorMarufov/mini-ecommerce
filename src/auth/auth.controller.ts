@@ -22,8 +22,11 @@ import { ConfirmOtpUserDto } from "../user/dto/confirm-otp-dto";
 import { VerifyOtpDto } from "../user/dto/verify-otp.dto";
 import { SignInUserDto } from "../user/dto/signin-dto";
 import { AuthGuard } from "../common/guard/authGuard";
-import { Response } from "express";
+import { Request, Response } from "express";
 import { NewOtpDto } from "../user/dto/new-otp.dto";
+import { RolesGuard } from "../common/guard/rolesGuard";
+import { checkRoles } from "../common/decorator/rolesDecorator";
+import { Role } from "../common/enum";
 
 @Controller("auth")
 export class AuthController {
@@ -82,8 +85,10 @@ export class AuthController {
     return this.authService.newOtp(newOtpDto);
   }
 
+  @UseGuards(AuthGuard, RolesGuard)
+  @checkRoles(Role.OWNER)
   @Patch("active/:id")
-  active(@Param("id", ParseIntPipe) id: number) {
-    return this.authService.activeUser(id);
+  active(@Req() req: Request, @Param("id", ParseIntPipe) id: number) {
+    return this.authService.activeUser(id, req);
   }
 }

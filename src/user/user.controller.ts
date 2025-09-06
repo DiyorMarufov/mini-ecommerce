@@ -27,6 +27,7 @@ import { Role } from "src/common/enum";
 import { AdminGuard } from "src/common/guard/adminGuard";
 import { UserGuard } from "src/common/guard/userGuard";
 import { OwnerGuard } from "../common/guard/ownerGuard";
+import { RolesGuard } from "../common/guard/rolesGuard";
 
 @ApiTags("User")
 @Controller("user")
@@ -92,8 +93,8 @@ export class UserController {
     return this.userService.updateUser(id, updateUserDto);
   }
 
-  @UseGuards(AuthGuard, UserGuard)
-  @checkRoles(Role.OWNER, Role.ADMIN, Role.USER)
+  @UseGuards(AuthGuard, UserGuard, RolesGuard)
+  @checkRoles(Role.OWNER)
   @Delete("/:id")
   @ApiOperation({ summary: "Delete user by ID" })
   @ApiBearerAuth("JWT-auth")
