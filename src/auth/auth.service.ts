@@ -175,7 +175,8 @@ export class AuthService {
     if (!user) {
       throw new NotFoundException(`User not found with email ${email}`);
     }
-    await this.userRepo.save({ ...user, is_active: true });
+    const updatedUser = await this.userRepo.save({ ...user, isActive: true });
+    console.log(updatedUser);
 
     if (!user)
       throw new BadRequestException("Bunday emaillik foydalanuvchi yo'q");
