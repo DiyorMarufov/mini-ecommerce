@@ -67,14 +67,16 @@ export class AuthService {
 
     const user = await this.userRepo.findOne({
       where: { email },
-      select: { password: true, id: true, role: true },
+      select: { password: true, id: true, role: true, isActive: true },
     });
 
     if (!user || !(await decrypt(password, user.password))) {
       throw new BadRequestException("Email or password incorrect");
     }
 
-    if (!user.isActive) throw new UnauthorizedException("User active emas");
+    if (!user.isActive) {
+      throw new UnauthorizedException("User active emas");
+    }
 
     const { id, role } = user;
     const payload: IPayload = { id, role };
