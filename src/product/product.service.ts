@@ -7,48 +7,125 @@ import { CreateProductDto } from "./dto/create-product.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Product } from "./entities/product.entity";
-import { Repository } from "typeorm";
+import { FindOptionsOrder, Repository } from "typeorm";
 import { CategoryService } from "../category/category.service";
 import { goodResponse } from "../common/helpers/good-response";
-import { Request } from "express";
-import { UserService } from "../user/user.service";
-import { Role } from "../common/enum";
+import { ProductOrderOptions, Role } from "../common/enum";
+import { IRequest } from "../common/types";
+import * as path from "path";
+import { removeFilesSafe } from "../common/utils/file-delete.util";
 
 @Injectable()
 export class ProductService {
+  private readonly uploadDir = path.join(process.cwd(), "uploads"); // yoki ConfigService’dan oling
+
   constructor(
     @InjectRepository(Product) private productRepo: Repository<Product>,
     private readonly categoryService: CategoryService
   ) {}
-  async create(req: Request, createProductDto: CreateProductDto) {
-    const { categoryId, images } = createProductDto;
+
+  async create(req: IRequest, createProductDto: CreateProductDto) {
+    const { categoryId, images, price } = createProductDto;
     await this.categoryService.findOne(categoryId);
 
     const newProduct = await this.productRepo.save({
       ...createProductDto,
       images: images || [],
-      userId: (req as any).user.id,
+      userId: req.user.id,
+      price: Number(price),
     });
 
-    return goodResponse(201, "Product muvaffaqiyatli qo‘shildi", newProduct);
+    return goodResponse(
+      201,
+      "Product muvaffaqiyatli qo‘shildi",
+      newProduct,
+      "newProduct"
+    );
   }
 
-  async findAll() {
-    const allProducts = await this.productRepo.find({
-      relations: { category: true },
+  async findAll(
+    skip: number = 0,
+    limit: number = 30,
+    orderOption: ProductOrderOptions = "latest"
+  ) {
+    let order: FindOptionsOrder<Product> = {};
+
+    switch (orderOption) {
+      case "latest":
+        order = { createdAt: "desc" };
+        break;
+      case "cheapest":
+        order = { price: "asc" };
+        break;
+      case "expensive":
+        order = { price: "desc" };
+        break;
+      default:
+        order = { createdAt: "desc" };
+        break;
+    }
+
+    const [allProducts, total] = await this.productRepo.findAndCount({
+      order,
+      relations: { category: true, user: true },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        price: true,
+        stock: true,
+        brand: true,
+        images: true,
+        createdAt: true,
+        user: {
+          id: true,
+          fname: true,
+          email: true,
+        },
+        category: {
+          id: true,
+          name: true,
+        },
+      },
+      skip,
+      take: limit,
     });
 
     return goodResponse(
       200,
       "Barcha products muvaffaqiyatli olindi",
-      allProducts
+      {
+        allProducts,
+        total,
+        skip,
+        limit,
+      },
+      "data"
     );
   }
 
   async findOne(id: number) {
     const product = await this.productRepo.findOne({
       where: { id },
-      relations: { category: true },
+      relations: { category: true, user: true },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        price: true,
+        stock: true,
+        brand: true,
+        images: true,
+        user: {
+          id: true,
+          fname: true,
+          email: true,
+        },
+        category: {
+          id: true,
+          name: true,
+        },
+      },
     });
     if (!product) {
       throw new NotFoundException(`${id} id'lik product topilmadi`);
@@ -57,20 +134,21 @@ export class ProductService {
     return goodResponse(
       200,
       `${id} id'lik product muvaffaqiyatli olindi`,
-      product
+      product,
+      "product"
     );
   }
 
-  async update(id: number, updateProductDto: UpdateProductDto, req: Request) {
+  async update(id: number, updateProductDto: UpdateProductDto, req: IRequest) {
     const { images, categoryId } = updateProductDto;
 
     const { data: product } = await this.findOne(id);
 
-    if ((req as any).user.role === Role.ADMIN) {
-      const userId = (req as any).user.id;
-      if (product.userId != userId)
+    if (req.user.role === Role.ADMIN) {
+      const userId = req.user.id;
+      if (product.user.id != userId)
         throw new ForbiddenException(
-          `Admin faqat o‘zi qo‘shgan productlari update qila oladi`
+          `Admin faqat o‘zi qo‘shgan product'ni yangilay oladi`
         );
     }
 
@@ -86,18 +164,48 @@ export class ProductService {
     return goodResponse(
       200,
       `${id} id'lik product muvaffaqiyatli yangilandi`,
-      updated
+      id,
+      "updatedProductId"
     );
   }
 
-  async remove(id: number) {
+  async remove(id: number, req: IRequest) {
     const { data: product } = await this.findOne(id);
+
+    if (req.user.role === Role.ADMIN) {
+      const userId = req.user.id;
+
+      if (product.user.id != userId)
+        throw new ForbiddenException(
+          `Admin faqat o‘zi qo‘shgan product'ni o‘chira oladi`
+        );
+    }
+    const filesReport = await removeFilesSafe(
+      product.images ?? [],
+      this.uploadDir
+    );
+
     await this.productRepo.remove(product);
 
     return goodResponse(
       200,
       `${id} lik product muvaffaqiyatli o‘chirildi`,
-      product
+      {
+        id,
+        files: filesReport,
+      },
+      "deletedProduct"
+    );
+  }
+
+  async removeAll() {
+    const { affected } = await this.productRepo.deleteAll();
+
+    return goodResponse(
+      200,
+      `Barcha product'lar o‘chirildi`,
+      affected,
+      "numberOfDeletedProducts"
     );
   }
 }

@@ -1,18 +1,8 @@
-export const goodResponse = <T>(
-  status_code: number,
+export const goodResponse = (
+  statusCode: number,
   message: string,
-  data: T
+  data,
+  dataName: string
 ) => {
-  return { status_code, message, data };
-}; /* class GoodResponse {
-  constructor(
-    public statusCode: number,
-    public message: string,
-    public data: Object,
-    public dataName: string
-  ) {
-    this[dataName] = data;
-    this.message = message;
-    this.statusCode = statusCode;
-  }
-} */
+  return { statusCode, message, data };
+};

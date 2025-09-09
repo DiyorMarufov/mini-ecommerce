@@ -29,11 +29,10 @@ export class CreateProductDto {
   @ApiProperty({
     type: "number",
     example: 300,
-    format: "number",
     description: "Product narxi(USD)",
   })
-  @IsPositive()
   @IsNumber()
+  @IsPositive()
   @Transform(({ value }: { value: string }) => Number(value))
   price: number;
 

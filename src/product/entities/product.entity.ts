@@ -23,7 +23,13 @@ export class Product extends BaseEntity {
     example: 300,
     description: "Product narxi(USD)",
   })
-  @Column({ type: "decimal" })
+  @Column({
+    type: "decimal",
+    transformer: {
+      to: (value: number) => value,
+      from: (value: string) => (value ? parseFloat(value) : null),
+    },
+  })
   price: number;
 
   @ApiProperty({
@@ -55,12 +61,13 @@ export class Product extends BaseEntity {
   user: User;
 
   @ApiProperty({
-    type: "string",
+    type: "array",
+    items: { type: "string" },
     description: "Array'da image ulr'larini qaytariladi",
     nullable: true,
   })
-  @Column("text", { array: true, default: [] })
-  images: any;
+  @Column("text", { array: true, default: [], nullable: true })
+  images?: string[];
 
   @ApiProperty({ type: "number", example: 17, description: "Product soni" })
   @Column()

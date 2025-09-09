@@ -12,6 +12,7 @@ import {
   UploadedFiles,
   UseGuards,
   Req,
+  Query,
 } from "@nestjs/common";
 import { FilesInterceptor } from "@nestjs/platform-express";
 import { multerConfig } from "../config/multer.config";
@@ -23,12 +24,15 @@ import {
   ApiOperation,
   ApiResponse,
   ApiConsumes,
+  ApiQuery,
 } from "@nestjs/swagger";
 import { Request, Response } from "express";
 import { checkRoles } from "src/common/decorator/rolesDecorator";
-import { Role } from "src/common/enum";
-import { AuthGuard } from "src/common/guard/authGuard";
-import { AdminGuard } from "src/common/guard/adminGuard";
+import { ProductOrderOptions, Role, SortOption } from "src/common/enum";
+import { AuthGuard } from "src/common/guard/auth.guard";
+import { AdminGuard } from "src/common/guard/admin.guard";
+import { IRequest } from "../common/types";
+import { RolesGuard } from "../common/guard/roles.guard";
 
 @ApiTags("Product")
 @Controller("product")
@@ -37,7 +41,6 @@ export class ProductController {
 
   @Post()
   @UseGuards(AuthGuard, AdminGuard)
-  @checkRoles(Role.OWNER, Role.ADMIN)
   @ApiConsumes("multipart/form-data")
   @UseInterceptors(FilesInterceptor("images", 10, multerConfig))
   @ApiOperation({ summary: "Create a new product (Admin only)" })
@@ -45,7 +48,7 @@ export class ProductController {
   @ApiResponse({ status: 401, description: "Unauthorized" })
   @ApiResponse({ status: 403, description: "Forbidden - Insufficient role" })
   create(
-    @Req() req: Request,
+    @Req() req: IRequest,
     @Body() createProductDto: CreateProductDto,
     @UploadedFiles() files?: Express.Multer.File[]
   ) {
@@ -62,8 +65,28 @@ export class ProductController {
   @Get()
   @ApiOperation({ summary: "Get all products" })
   @ApiResponse({ status: 200, description: "List of products" })
-  findAll() {
-    return this.productService.findAll();
+  @ApiQuery({
+    name: "skip",
+    required: false,
+    type: "number",
+  })
+  @ApiQuery({
+    name: "limit",
+    required: false,
+    type: "number",
+  })
+  @ApiQuery({
+    name: "order",
+    required: false,
+    type: String,
+    enum: SortOption,
+  })
+  findAll(
+    @Query("skip") skip: number,
+    @Query("limit") limit: number,
+    @Query("order") order: ProductOrderOptions
+  ) {
+    return this.productService.findAll(skip, limit, order);
   }
 
   @Get("image/:filename")
@@ -84,7 +107,6 @@ export class ProductController {
 
   @Patch(":id")
   @UseGuards(AuthGuard, AdminGuard)
-  @checkRoles(Role.OWNER, Role.ADMIN)
   @ApiConsumes("multipart/form-data")
   @UseInterceptors(FilesInterceptor("images", 10, multerConfig))
   @ApiOperation({ summary: "Update product by ID (Admin only)" })
@@ -92,7 +114,7 @@ export class ProductController {
   @ApiResponse({ status: 401, description: "Unauthorized" })
   @ApiResponse({ status: 403, description: "Forbidden - Insufficient role" })
   update(
-    @Req() req: Request,
+    @Req() req: IRequest,
     @Param("id", ParseIntPipe)
     id: number,
     @Body() updateProductDto: UpdateProductDto,
@@ -111,13 +133,20 @@ export class ProductController {
 
   @Delete(":id")
   @UseGuards(AuthGuard, AdminGuard)
-  @checkRoles(Role.OWNER, Role.ADMIN)
   @ApiOperation({ summary: "Delete product by ID (Admin only)" })
   @ApiResponse({ status: 200, description: "Product deleted" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
   @ApiResponse({ status: 403, description: "Forbidden - Insufficient role" })
   @ApiResponse({ status: 404, description: "Product not found" })
-  remove(@Param("id", ParseIntPipe) id: number) {
-    return this.productService.remove(id);
+  remove(@Req() req: IRequest, @Param("id", ParseIntPipe) id: number) {
+    return this.productService.remove(id, req);
+  }
+
+  @Delete()
+  @UseGuards(AuthGuard, RolesGuard)
+  @checkRoles(Role.OWNER)
+  @ApiResponse({ status: 200, description: "All products deleted" })
+  removeAll() {
+    return this.productService.removeAll();
   }
 }

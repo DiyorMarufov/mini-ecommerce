@@ -1,8 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { User } from "./entities/user.entity";
 import { FindOptionsWhere, Repository } from "typeorm";
@@ -10,10 +6,10 @@ import { Role } from "../common/enum";
 import config from "src/config";
 import { errorCatch } from "src/common/helpers/error-catch";
 import { goodResponse } from "src/common/helpers/good-response";
-import { Request } from "express";
 import { UpdateUserDto } from "./dto/update-user.dto";
-import { UpdateUserByAdminDto } from "./dto/update-user-byAdmin-dto";
+import { UpdateUserRoleDto } from "./dto/update-user-byAdmin-dto";
 import { encrypt } from "../common/bcrypt";
+import { IRequest } from "../common/types";
 
 @Injectable()
 export class UserService {
@@ -39,107 +35,82 @@ export class UserService {
     }
   }
 
-  async findAll(req: Request) {
-    const user = (req as any).user;
+  async findAll(req: IRequest) {
+    const user = req.user;
     let where: FindOptionsWhere<User> = {};
-    if (user && "id" in user) {
-      const id = user.id;
-      const userData = await this.userRepo.findOne({ where: { id } });
 
-      if (!userData) {
-        throw new NotFoundException(`User not found`);
-      }
+    const id = user.id;
+    const { data: userData } = await this.findOne(id);
 
-      if (userData.role === "admin") {
-        where.role = Role.USER;
-      }
+    if (userData.role === Role.ADMIN) {
+      where.role = Role.USER;
     }
 
     const allUsers = await this.userRepo.find({
       where,
-      select: {
-        address: true,
-        email: true,
-        fname: true,
-        id: true,
-        lname: true,
-        role: true,
-        isActive: true,
-      },
+      order: { createdAt: "asc" },
     });
 
-    return goodResponse(200, "Barcha users muvaffaqiyatli olindi", allUsers);
+    return goodResponse(
+      200,
+      "Barcha users muvaffaqiyatli olindi",
+      allUsers,
+      "allUsers"
+    );
   }
 
-  async findOne(id: number, req?: Request) {
+  async findOne(id: number, req?: IRequest) {
     let where: FindOptionsWhere<User> = { id };
-    if ((req as any).user.role === Role.ADMIN) {
+    if (req && req.user.role === Role.ADMIN) {
       where.role = Role.USER;
     }
-    const user = await this.userRepo.findOne({
-      where,
-      select: {
-        address: true,
-        email: true,
-        fname: true,
-        lname: true,
-        id: true,
-        role: true,
-        isActive: true,
-      },
-    });
+    const user = await this.userRepo.findOne({ where });
     if (!user) throw new NotFoundException(`${id} id'lik user topilmadi`);
 
-    return goodResponse(200, `${id} id'lik user muvaffaqiyatli olindi`, user);
+    return goodResponse(
+      200,
+      `${id} id'lik user muvaffaqiyatli olindi`,
+      user,
+      "user"
+    );
   }
 
   async updateUser(id: number, updateUserDto: UpdateUserDto) {
     try {
-      const existsUser = await this.userRepo.findOne({ where: { id } });
-
-      if (!existsUser) {
-        throw new NotFoundException(`User with ID ${id} not found`);
-      }
-
-      const { affected } = await this.userRepo.update(id, updateUserDto);
-
-      if (!affected) {
-        throw new BadRequestException(`User with ID ${id} not updated`);
-      }
-
-      const updatedUser = await this.userRepo.findOne({ where: { id } });
-
-      return goodResponse(200, "success", {
-        id: updatedUser?.id,
-        fname: updatedUser?.fname,
-        lname: updatedUser?.lname,
-        address: updatedUser?.address,
-        email: updatedUser?.email,
+      const { data: user } = await this.findOne(id);
+      const updatedUser = await this.userRepo.save({
+        ...user,
+        ...updateUserDto,
       });
+
+      return goodResponse(200, "success", updatedUser, "updatedUser");
     } catch (error) {
       return errorCatch(error);
     }
   }
 
-  async updateUserRole(id: number, updateUserByAdminDto: UpdateUserByAdminDto) {
+  async updateUserRole(id: number, updateUserRoleDto: UpdateUserRoleDto) {
     try {
-      const existsUser = await this.userRepo.findOne({ where: { id } });
-      if (!existsUser) {
-        throw new NotFoundException(`User with ID ${id} not found`);
+      const { role } = updateUserRoleDto;
+      const {
+        raw: [updatedUser],
+      } = await this.userRepo
+        .createQueryBuilder()
+        .update(User)
+        .set({ role, isActive: true })
+        .where("id = :id", { id })
+        .returning("*")
+        .execute();
+      if (!updatedUser) {
+        throw new NotFoundException(`${id} id'lik user topilmadi`);
       }
 
-      const { affected } = await this.userRepo.update(id, {
-        ...updateUserByAdminDto,
-        isActive: true,
-      });
-
-      if (!affected) {
-        throw new BadRequestException(`User with ID ${id} not updated`);
-      }
-
-      const updatedUser = await this.userRepo.findOne({ where: { id } });
-
-      return goodResponse(200, "success", updatedUser);
+      return goodResponse(
+        200,
+        `${id} id'lik user role'i ${role}'ga o‘zgartirildi`,
+        id,
+        "updatedUserId"
+      );
     } catch (error) {
       return errorCatch(error);
     }
@@ -147,14 +118,15 @@ export class UserService {
 
   async deleteUser(id: number) {
     try {
-      const existsUser = await this.userRepo.findOne({ where: { id } });
+      const { affected } = await this.userRepo.delete({ id });
+      if (!affected) throw new NotFoundException(`${id} id'lik user topilmadi`);
 
-      if (!existsUser) {
-        throw new NotFoundException(`User with ID ${id} not found`);
-      }
-
-      await this.userRepo.delete(id);
-      return goodResponse(200, "success", {});
+      return goodResponse(
+        200,
+        `${id} id'lik user muvaffaqiyatli o‘chirildi`,
+        id,
+        "deleteUserId"
+      );
     } catch (error) {
       return errorCatch(error);
     }

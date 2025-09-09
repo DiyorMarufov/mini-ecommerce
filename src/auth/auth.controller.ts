@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
   Param,
   ParseIntPipe,
   Patch,
@@ -21,12 +22,14 @@ import { CreateUserDto } from "../user/dto/create-user.dto";
 import { ConfirmOtpUserDto } from "../user/dto/confirm-otp-dto";
 import { VerifyOtpDto } from "../user/dto/verify-otp.dto";
 import { SignInUserDto } from "../user/dto/signin-dto";
-import { AuthGuard } from "../common/guard/authGuard";
-import { Request, Response } from "express";
+import { AuthGuard } from "../common/guard/auth.guard";
+import { Response } from "express";
 import { NewOtpDto } from "../user/dto/new-otp.dto";
-import { RolesGuard } from "../common/guard/rolesGuard";
 import { checkRoles } from "../common/decorator/rolesDecorator";
 import { Role } from "../common/enum";
+import { IRequest } from "../common/types";
+import { UpdateUserStatusDto } from "./dto/update-user-status.dto";
+import { RolesGuard } from "../common/guard/roles.guard";
 
 @Controller("auth")
 export class AuthController {
@@ -50,6 +53,7 @@ export class AuthController {
     return this.authService.verifyOtp(verifyOtpDto);
   }
 
+  @HttpCode(200)
   @Post("signin")
   @ApiOperation({ summary: "Sign in with email and password" })
   @ApiBody({ type: SignInUserDto })
@@ -71,7 +75,7 @@ export class AuthController {
   @ApiBearerAuth("JWT-auth")
   @ApiResponse({ status: 200, description: "Authenticated user profile" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
-  async getProfile(@Req() req: Request) {
+  async getProfile(@Req() req: IRequest) {
     return this.authService.authUserProfile(req);
   }
 
@@ -88,7 +92,11 @@ export class AuthController {
   @UseGuards(AuthGuard, RolesGuard)
   @checkRoles(Role.OWNER)
   @Patch("active/:id")
-  active(@Req() req: Request, @Param("id", ParseIntPipe) id: number) {
-    return this.authService.activeUser(id, req);
+  updateUserStatusById(
+    @Req() req: IRequest,
+    @Body() updateUserStatusDto: UpdateUserStatusDto,
+    @Param("id", ParseIntPipe) id: number
+  ) {
+    return this.authService.updateUserStatusById(id, req, updateUserStatusDto);
   }
 }

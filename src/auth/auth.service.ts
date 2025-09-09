@@ -24,8 +24,9 @@ import { NewOtpDto } from "../user/dto/new-otp.dto";
 import * as otpGenerator from "otp-generator";
 import { Role } from "../common/enum";
 import { UserService } from "../user/user.service";
-import { Request, Response } from "express";
-import { Payload } from "../common/types/payload.type";
+import { Response } from "express";
+import { IRequest, IPayload } from "../common/types";
+import { UpdateUserStatusDto } from "./dto/update-user-status.dto";
 
 @Injectable()
 export class AuthService {
@@ -38,81 +39,73 @@ export class AuthService {
   ) {}
 
   async signUp(createUserDto: CreateUserDto): Promise<object | undefined> {
-    const existingEmail = await this.userRepo.findOne({
-      where: { email: createUserDto.email },
-    });
-    if (existingEmail)
-      throw new BadRequestException(
-        `Email ${createUserDto.email} already exists`
-      );
-
-    const { password, email } = createUserDto;
-    const hashedPassword = await encrypt(password);
-    await this.userRepo.save({
-      ...createUserDto,
-      password: hashedPassword,
-      role: Role.USER,
-    });
-
-    return this.newOtp({ email });
-  }
-
-  async signIn(userSignInDto: SignInUserDto, res: Response): Promise<object> {
     try {
-      const { email, password } = userSignInDto;
+      const existingEmail = await this.userRepo.findOne({
+        where: { email: createUserDto.email },
+      });
+      if (existingEmail)
+        throw new BadRequestException(
+          `Email ${createUserDto.email} already exists`
+        );
 
-      const user = await this.userRepo.findOne({ where: { email } });
+      const { password, email } = createUserDto;
+      const hashedPassword = await encrypt(password);
+      await this.userRepo.save({
+        ...createUserDto,
+        password: hashedPassword,
+        role: Role.USER,
+      });
 
-      if (!user) {
-        throw new BadRequestException("Email or password incorrect");
-      }
-
-      const isPasswordMatch = await decrypt(password, user.password);
-
-      console.log(isPasswordMatch, "isPasswordMatch");
-      console.log(password, "password");
-      if (!isPasswordMatch) {
-        throw new BadRequestException("Email or password incorrect");
-      }
-
-      const { id, role } = user;
-      const payload: Payload = { id, role };
-
-      const accessToken = await this.tokenService.generateAccessToken(payload);
-      const refreshToken =
-        await this.tokenService.generateRefreshToken(payload);
-
-      writeToCookie(res, "refreshTokenUser", refreshToken);
-
-      return goodResponse(200, "success", accessToken);
+      return this.newOtp({ email });
     } catch (error) {
       return errorCatch(error);
     }
   }
 
-  async authUserProfile(req: Request): Promise<any> {
+  async signIn(userSignInDto: SignInUserDto, res: Response): Promise<object> {
+    const { email, password } = userSignInDto;
+
+    const user = await this.userRepo.findOne({
+      where: { email },
+      select: { password: true, id: true, role: true },
+    });
+
+    if (!user || !(await decrypt(password, user.password))) {
+      throw new BadRequestException("Email or password incorrect");
+    }
+
+    if (user.isActive) throw new UnauthorizedException("User active emas");
+
+    const { id, role } = user;
+    const payload: IPayload = { id, role };
+
+    const accessToken = await this.tokenService.generateAccessToken(payload);
+    const refreshToken = await this.tokenService.generateRefreshToken(payload);
+
+    writeToCookie(res, "refreshTokenUser", refreshToken);
+
+    return goodResponse(200, "success", accessToken, "accessToken");
+  }
+
+  async authUserProfile(req: IRequest): Promise<any> {
     try {
-      const user = (req as any).user;
-      if (user && "id" in user) {
-        const id = user.id;
-        const userData = await this.userRepo.findOne({ where: { id } });
+      const user = req.user;
+      const id = user.id;
+      const userData = await this.userRepo.findOne({ where: { id } });
 
-        if (!userData) {
-          throw new NotFoundException(`User not found`);
-        }
-
-        const authUser = {
-          id: userData.id,
-          fname: userData.fname,
-          lname: userData.lname,
-          address: userData.address,
-          email: userData.email,
-        };
-
-        return goodResponse(200, "success", authUser);
-      } else {
-        throw new UnauthorizedException("User not authenticated");
+      if (!userData) {
+        throw new NotFoundException(`User not found`);
       }
+
+      const authUser = {
+        id: userData.id,
+        fname: userData.fname,
+        lname: userData.lname,
+        address: userData.address,
+        email: userData.email,
+      };
+
+      return goodResponse(200, "success", authUser, "user");
     } catch (error) {
       return errorCatch(error);
     }
@@ -192,21 +185,28 @@ export class AuthService {
     return { message: "🎉 Tabriklayman, siz active bo'ldingiz" };
   }
 
-  async activeUser(id: number, req: Request) {
+  async updateUserStatusById(
+    id: number,
+    req: IRequest,
+    updateUserStatusDto: UpdateUserStatusDto
+  ) {
     const { data: user } = await this.userService.findOne(id, req);
+    const { isActive } = updateUserStatusDto;
 
-    if (user.isActive)
+    if (user.isActive === isActive)
       return goodResponse(
         200,
-        `${id} id'lik user muvaffaqiyatli active'lashtirildi`,
-        user
+        `${id} id'lik user status'i muvaffaqiyatli yangilandi`,
+        id,
+        "activatedUserId"
       );
     await this.userRepo.save({ ...user, isActive: true });
 
     return goodResponse(
       200,
-      `${id} id'lik user muvaffaqiyatli active'lashtirildi`,
-      user
+      `${id} id'lik user status'i muvaffaqiyatli yangilandi`,
+      id,
+      "activatedUserId"
     );
   }
 }

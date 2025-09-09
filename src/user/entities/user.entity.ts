@@ -21,7 +21,7 @@ export class User extends BaseEntity {
   @Column({ name: "email", type: "varchar", unique: true })
   email: string;
 
-  @Column({ name: "password", type: "varchar" })
+  @Column({ name: "password", type: "varchar", select: false })
   password: string;
 
   @Column({ name: "role", type: "enum", enum: Role, default: Role.USER })

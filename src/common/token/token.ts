@@ -1,6 +1,5 @@
-import { Injectable } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import config from 'src/config';
+import { Injectable } from "@nestjs/common";
+import { JwtService } from "@nestjs/jwt";
 
 @Injectable()
 export class TokenService {
@@ -8,27 +7,27 @@ export class TokenService {
 
   generateAccessToken = async (payload: object) => {
     return this.jwtService.signAsync(payload, {
-      secret: config.ACCESS_TOKEN_KEY,
-      expiresIn: config.ACCESS_TOKEN_TIME,
+      secret: process.env.ACCESS_TOKEN_KEY,
+      expiresIn: process.env.ACCESS_TOKEN_TIME,
     });
   };
 
   generateRefreshToken = async (payload: object) => {
     return this.jwtService.signAsync(payload, {
-      secret: config.REFRESH_TOKEN_KEY,
-      expiresIn: config.REFRESH_TOKEN_TIME,
+      secret: process.env.REFRESH_TOKEN_KEY,
+      expiresIn: process.env.REFRESH_TOKEN_TIME,
     });
   };
 
   verifyAccessToken = async (accessToken: string) => {
     return this.jwtService.verify(accessToken, {
-      secret: config.ACCESS_TOKEN_KEY,
+      secret: process.env.ACCESS_TOKEN_KEY,
     });
   };
 
   verifyRefreshToken = async (refreshToken: string) => {
     return this.jwtService.verify(refreshToken, {
-      secret: config.REFRESH_TOKEN_KEY,
+      secret: process.env.REFRESH_TOKEN_KEY,
     });
   };
 }

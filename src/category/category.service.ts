@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
@@ -11,6 +12,8 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { goodResponse } from "../common/helpers/good-response";
 import { checkUniqueFields } from "../common/helpers/check-unique-fields";
 import { Request } from "express";
+import { IRequest } from "../common/types";
+import { Role } from "../common/enum";
 
 @Injectable()
 export class CategoryService {
@@ -18,7 +21,7 @@ export class CategoryService {
     @InjectRepository(Category)
     private readonly categoryRepo: Repository<Category>
   ) {}
-  async create(createCategoryDto: CreateCategoryDto, req: Request) {
+  async create(createCategoryDto: CreateCategoryDto, req: IRequest) {
     const { name } = createCategoryDto;
     const errors = await checkUniqueFields(
       this.categoryRepo,
@@ -29,10 +32,15 @@ export class CategoryService {
 
     const newCategory = await this.categoryRepo.save({
       ...createCategoryDto,
-      userId: (req as any).user.id,
+      userId: req.user.id,
     });
 
-    return goodResponse(201, "Category muvaffaqiyatli qo‘shildi", newCategory);
+    return goodResponse(
+      201,
+      "Category muvaffaqiyatli qo‘shildi",
+      newCategory,
+      "newCategory"
+    );
   }
 
   async findAll() {
@@ -42,14 +50,17 @@ export class CategoryService {
       },
       relations: { user: true },
       select: {
-        user: { lname: true, fname: true, email: true },
+        id: true,
+        name: true,
+        user: { id: true, fname: true, email: true },
       },
     });
 
     return goodResponse(
       200,
       "Barcha category muvaffaqiyatli olindi",
-      allCategories
+      allCategories,
+      "allCategories"
     );
   }
 
@@ -58,28 +69,44 @@ export class CategoryService {
       where: { id },
       relations: { user: true },
       select: {
-        user: { lname: true, fname: true, email: true },
+        id: true,
+        name: true,
+        user: { id: true, fname: true, email: true },
       },
     });
     if (!category)
       throw new NotFoundException(`${id} id'lik category topilmadi`);
 
-    return goodResponse<typeof category>(
+    return goodResponse(
       200,
       `${id} id'lik category muvaffaqiyatli olindi`,
-      category
+      category,
+      "category"
     );
   }
 
-  async update(id: number, updateCategoryDto: UpdateCategoryDto) {
+  async update(
+    id: number,
+    updateCategoryDto: UpdateCategoryDto,
+    req: IRequest
+  ) {
     const { data } = await this.findOne(id);
+
+    if (req.user.role === Role.ADMIN) {
+      const userId = req.user.id;
+      if (data.user.id !== userId)
+        throw new ForbiddenException(
+          `Admin faqat o‘zi qo‘shgan category'ni yangilay oladi`
+        );
+    }
     const { name } = updateCategoryDto;
 
     if (data.name === name) {
       return goodResponse(
         304,
         `${id} id'lik category muvaffaqiyatli yangilandi`,
-        data
+        data,
+        "updatedCategory"
       );
     }
 
@@ -95,19 +122,28 @@ export class CategoryService {
     return goodResponse(
       200,
       `${id} id'lik category muvaffaqiyatli yangilandi`,
-      updatedCategory
+      updatedCategory,
+      "updatedCategory"
     );
   }
 
-  async remove(id: number) {
+  async remove(id: number, req: IRequest) {
     const { data } = await this.findOne(id);
 
+    if (req.user.role === Role.ADMIN) {
+      const userId = req.user.id;
+      if (data.user.id !== userId)
+        throw new ForbiddenException(
+          `Admin faqat o‘zi qo‘shgan category'ni o‘chira oladi`
+        );
+    }
     await this.categoryRepo.remove(data);
 
     return goodResponse(
       200,
       `${id} id'lik category muvaffaqiyatli o‘chirildi`,
-      data
+      data,
+      "deletedCategory"
     );
   }
 }

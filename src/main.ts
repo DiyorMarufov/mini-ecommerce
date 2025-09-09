@@ -49,7 +49,7 @@ async function start() {
   await app.listen(PORT, () => {
     console.log(`Server started at: http://localhost:${PORT}`);
     console.log(
-      `Swagger documentation available at http://localhost:${PORT}/api/docs`
+      `Swagger documentation available at http://localhost:${PORT}/docs`
     );
   });
 }

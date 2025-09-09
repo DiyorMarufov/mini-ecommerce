@@ -7,7 +7,7 @@ import {
 import { JwtService } from "@nestjs/jwt";
 import { Observable } from "rxjs";
 import config from "src/config";
-import { Payload } from "../types/payload.type";
+import { IRequest, IPayload } from "../types";
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -16,7 +16,7 @@ export class AuthGuard implements CanActivate {
   canActivate(
     context: ExecutionContext
   ): boolean | Promise<boolean> | Observable<boolean> {
-    const req = context.switchToHttp().getRequest();
+    const req: IRequest = context.switchToHttp().getRequest();
     const auth = req.headers?.authorization;
 
     if (!auth) {
@@ -30,7 +30,7 @@ export class AuthGuard implements CanActivate {
     }
 
     try {
-      const user: Payload = this.jwtService.verify(token, {
+      const user: IPayload = this.jwtService.verify(token, {
         secret: config.ACCESS_TOKEN_KEY,
       });
 
