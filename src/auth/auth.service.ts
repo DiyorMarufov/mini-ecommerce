@@ -74,7 +74,7 @@ export class AuthService {
       throw new BadRequestException("Email or password incorrect");
     }
 
-    if (user.isActive) throw new UnauthorizedException("User active emas");
+    if (!user.isActive) throw new UnauthorizedException("User active emas");
 
     const { id, role } = user;
     const payload: IPayload = { id, role };
