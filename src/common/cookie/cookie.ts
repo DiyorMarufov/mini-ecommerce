@@ -1,9 +1,9 @@
-import { Response } from 'express';
+import { Response } from "express";
 
 export const writeToCookie = (
   res: Response,
   dataName: string,
-  data: string,
+  data: string
 ) => {
   res.cookie(dataName, data, {
     secure: true,

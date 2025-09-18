@@ -48,7 +48,7 @@ export class ProductController {
   @ApiResponse({ status: 401, description: "Unauthorized" })
   @ApiResponse({ status: 403, description: "Forbidden - Insufficient role" })
   create(
-    @Req() req: IRequest,
+    @Req() req: IRequest, 
     @Body() createProductDto: CreateProductDto,
     @UploadedFiles() files?: Express.Multer.File[]
   ) {

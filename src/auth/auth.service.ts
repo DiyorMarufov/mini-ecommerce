@@ -67,7 +67,13 @@ export class AuthService {
 
     const user = await this.userRepo.findOne({
       where: { email },
-      select: { password: true, id: true, role: true, isActive: true },
+      select: {
+        password: true,
+        id: true,
+        role: true,
+        isActive: true,
+        email: true,
+      },
     });
 
     if (!user || !(await decrypt(password, user.password))) {
@@ -86,7 +92,16 @@ export class AuthService {
 
     writeToCookie(res, "refreshTokenUser", refreshToken);
 
-    return goodResponse(200, "success", accessToken, "accessToken");
+    const { password: hashedPassword, ...signedInUser } = user;
+
+    return {
+      statusCode: 200,
+      message: "User signed in successfully",
+      data: {
+        accessToken,
+        user: signedInUser,
+      },
+    };
   }
 
   async authUserProfile(req: IRequest): Promise<any> {
@@ -99,15 +114,7 @@ export class AuthService {
         throw new NotFoundException(`User not found`);
       }
 
-      const authUser = {
-        id: userData.id,
-        fname: userData.fname,
-        lname: userData.lname,
-        address: userData.address,
-        email: userData.email,
-      };
-
-      return goodResponse(200, "success", authUser, "user");
+      return goodResponse(200, "success", userData, "user");
     } catch (error) {
       return errorCatch(error);
     }

@@ -15,6 +15,7 @@ export class CreateProductDto {
   @IsNotEmpty()
   @IsString()
   @MinLength(3)
+  @Transform(({ value }: { value: string }) => value.trim())
   title: string;
 
   @ApiProperty({
@@ -24,6 +25,7 @@ export class CreateProductDto {
   })
   @IsNotEmpty()
   @IsString()
+  @Transform(({ value }: { value: string }) => value.trim())
   description: string;
 
   @ApiProperty({
@@ -33,7 +35,9 @@ export class CreateProductDto {
   })
   @IsNumber()
   @IsPositive()
-  @Transform(({ value }: { value: string }) => Number(value))
+  @Transform(({ value }: { value: string }) =>
+    value !== undefined ? Number(value) : undefined
+  )
   price: number;
 
   @ApiProperty({
@@ -43,18 +47,16 @@ export class CreateProductDto {
   })
   @IsInt()
   @IsPositive()
-  @Transform(({ value }: { value: string }) => Number(value))
+  @Transform(({ value }: { value: string }) =>
+    value !== undefined ? Number(value) : undefined
+  )
   categoryId: number;
 
   @ApiProperty({
     type: "array",
-    items: {
-      format: "binary",
-      type: "string",
-    },
-    maxItems: 10,
-    description: "Image file to upload",
+    items: { type: "string", format: "binary" },
     required: false,
+    maxItems: 10,
   })
   @IsOptional()
   images?: any;
@@ -66,7 +68,9 @@ export class CreateProductDto {
   })
   @IsInt()
   @IsPositive()
-  @Transform(({ value }: { value: string }) => Number(value))
+  @Transform(({ value }: { value: string }) =>
+    value !== undefined ? Number(value) : undefined
+  )
   stock: number;
 
   @ApiProperty({
